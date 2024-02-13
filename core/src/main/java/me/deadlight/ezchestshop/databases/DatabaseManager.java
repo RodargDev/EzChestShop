@@ -31,14 +31,11 @@ public class DatabaseManager {
 
     public static void initializeDatabase() {
         Map<String, Object> properties = new HashMap<>();
-        // Set the schema generation property to "update"
         properties.put("jakarta.persistence.schema-generation.database.action", "update");
-
-        // For complete automation, consider setting these additional properties:
         properties.put("hibernate.hbm2ddl.auto", "update"); // Hibernate-specific, complements the JPA setting
-        properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL5Dialect"); // Set appropriate dialect for MySQL
-        properties.put("hibernate.dialect", "org.hibernate.dialect.SQLiteDialect"); // Set appropriate dialect for SQLite
+
         if (Config.database_type == Database.MYSQL) {
+            // Set MySQL-specific properties
             String databaseName = Config.databasemysql_databasename;
             String ip = Config.databasemysql_ip;
             int port = Config.databasemysql_port;
@@ -46,44 +43,40 @@ public class DatabaseManager {
             String password = Config.databasemysql_password;
             boolean useSSL = Config.databasemysql_use_ssl;
 
-            // HikariCP and MySQL Configuration
             properties.put("jakarta.persistence.jdbc.url", "jdbc:mysql://" + ip + ":" + port + "/" + databaseName + "?useSSL=" + useSSL);
             properties.put("jakarta.persistence.jdbc.user", username);
             properties.put("jakarta.persistence.jdbc.password", password);
             properties.put("jakarta.persistence.jdbc.driver", "com.mysql.cj.jdbc.Driver");
-            properties.put("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider");
-            properties.put("hibernate.hikari.dataSourceClassName", "com.mysql.cj.jdbc.MysqlDataSource");
-            properties.put("hibernate.hikari.dataSource.url", "jdbc:mysql://" + ip + ":" + port + "/" + databaseName + "?useSSL=" + useSSL);
-            properties.put("hibernate.hikari.dataSource.user", username);
-            properties.put("hibernate.hikari.dataSource.password", password);
             properties.put("hibernate.dialect", "org.hibernate.dialect.MySQL5Dialect");
         } else {
-            // SQLite Configuration
+            // Set SQLite-specific properties
             File dataFolder = new File(EzChestShop.getPlugin().getDataFolder(), "ecs-database.db");
             if (!dataFolder.exists()) {
-                dataFolder.getParentFile().mkdirs(); // This will create the data folder if not exist
+                dataFolder.getParentFile().mkdirs();
             }
 
-            // HikariCP and SQLite Configuration
             properties.put("jakarta.persistence.jdbc.url", "jdbc:sqlite:" + dataFolder.getAbsolutePath());
             properties.put("jakarta.persistence.jdbc.driver", "org.sqlite.JDBC");
-            properties.put("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider");
-            properties.put("hibernate.hikari.dataSourceClassName", "org.sqlite.JDBC");
-            properties.put("hibernate.hikari.dataSource.url", "jdbc:sqlite:" + dataFolder.getAbsolutePath());
             properties.put("hibernate.dialect", "org.hibernate.dialect.SQLiteDialect");
         }
 
-        // Additional HikariCP settings
+        // Common HikariCP settings
+        properties.put("hibernate.connection.provider_class", "org.hibernate.hikaricp.internal.HikariCPConnectionProvider");
         properties.put("hibernate.hikari.minimumIdle", "5");
         properties.put("hibernate.hikari.maximumPoolSize", "10");
         properties.put("hibernate.hikari.idleTimeout", "30000");
         properties.put("hibernate.hikari.connectionTimeout", "30000");
         properties.put("hibernate.hikari.poolName", "EzChestShopPool");
 
-        // The persistence unit name is arbitrary as we don't use persistence.xml
-        emf = Persistence.createEntityManagerFactory("DynamicUnit", properties);
-        shopRepository = new ShopRepository(emf);
-        transactionRepository = new TransactionRepository(emf);
+        // Attempt to create an EntityManagerFactory
+        try {
+            emf = Persistence.createEntityManagerFactory("DynamicUnit", properties);
+            shopRepository = new ShopRepository(emf);
+            transactionRepository = new TransactionRepository(emf);
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Handle the exception (e.g., log it, notify the user, etc.)
+        }
     }
 
     public static void closeDatabase() {
