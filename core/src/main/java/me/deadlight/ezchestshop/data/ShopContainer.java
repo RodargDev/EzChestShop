@@ -1,11 +1,10 @@
 package me.deadlight.ezchestshop.data;
-import me.deadlight.ezchestshop.enums.Changes;
+import me.deadlight.ezchestshop.databases.DatabaseManager;
 import me.deadlight.ezchestshop.events.PlayerTransactEvent;
 import me.deadlight.ezchestshop.EzChestShop;
 import me.deadlight.ezchestshop.utils.holograms.ShopHologram;
 import me.deadlight.ezchestshop.utils.objects.EzShop;
 import me.deadlight.ezchestshop.utils.objects.ShopSettings;
-import me.deadlight.ezchestshop.utils.objects.SqlQueue;
 import me.deadlight.ezchestshop.utils.Utils;
 import me.deadlight.ezchestshop.utils.WebhookSender;
 import me.deadlight.ezchestshop.utils.XPEconomy;
@@ -42,8 +41,7 @@ public class ShopContainer {
      * so querying all shops is less resource expensive
      */
     public static void queryShopsToMemory() {
-        DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-        shopMap = db.queryShops();
+        shopMap = DatabaseManager.queryStoredShopsMap();
     }
 
     /**
@@ -52,9 +50,7 @@ public class ShopContainer {
      * @param loc the Location of the Shop.
      */
     public static void deleteShop(Location loc) {
-        DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-        db.deleteEntry("location", Utils.LocationtoString(loc),
-                "shopdata");
+        DatabaseManager.deleteShop(loc);
         shopMap.remove(loc);
 
         for (Player p : Bukkit.getOnlinePlayers()) {
@@ -70,15 +66,14 @@ public class ShopContainer {
      * @param p   the Owner of the Shop.
      */
     public static void createShop(Location loc, Player p, ItemStack item, double buyprice, double sellprice, boolean msgtoggle,
-                                  boolean dbuy, boolean dsell, String admins, boolean shareincome,
+                                  boolean dbuy, boolean dsell, List<String> admins, boolean shareincome,
                                    boolean adminshop, String rotation) {
-        DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-        String sloc = Utils.LocationtoString(loc);
-        String encodedItem = Utils.encodeItem(item);
-        db.insertShop(sloc, p.getUniqueId().toString(), encodedItem == null ? "Error" : encodedItem, buyprice, sellprice, msgtoggle, dbuy, dsell, admins, shareincome, adminshop, rotation, new ArrayList<>());
-        ShopSettings settings = new ShopSettings(sloc, msgtoggle, dbuy, dsell, admins, shareincome, adminshop, rotation, new ArrayList<>());
-        EzShop shop = new EzShop(loc, p, item, buyprice, sellprice, settings);
-        shopMap.put(loc, shop);
+
+        EzShop newShop = DatabaseManager.createShop(
+                loc, p, item, buyprice, sellprice, msgtoggle, dbuy, dsell, admins, shareincome, adminshop, rotation, new ArrayList<>()
+        );
+
+        shopMap.put(loc, newShop);
         EzChestShop.getPlugin().getServer().getScheduler().runTaskAsynchronously(
                 EzChestShop.getPlugin(), () -> {
 
@@ -106,12 +101,9 @@ public class ShopContainer {
     }
 
     public static void loadShop(Location loc, PersistentDataContainer dataContainer) {
-        DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-        String sloc = Utils.LocationtoString(loc);
         boolean msgtoggle = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "msgtoggle"), PersistentDataType.INTEGER) == 1;
         boolean dbuy = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "dbuy"), PersistentDataType.INTEGER) == 1;
         boolean dsell = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER) == 1;
-        String admins = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING);
         boolean shareincome = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER) == 1;
         boolean adminshop = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "adminshop"), PersistentDataType.INTEGER) == 1;
         String owner = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "owner"), PersistentDataType.STRING);
@@ -120,11 +112,14 @@ public class ShopContainer {
         double sellprice = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "sell"), PersistentDataType.DOUBLE);
         String rotation = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "rotation"), PersistentDataType.STRING);
         rotation = rotation == null ? "top" : rotation;
-        db.insertShop(sloc, owner, encodedItem == null ? "Error" : encodedItem, buyprice, sellprice, msgtoggle, dbuy, dsell, admins, shareincome, adminshop, rotation, new ArrayList<>());
 
-        ShopSettings settings = new ShopSettings(sloc, msgtoggle, dbuy, dsell, admins, shareincome, adminshop, rotation, new ArrayList<>());
-        EzShop shop = new EzShop(loc, owner, Utils.decodeItem(encodedItem), buyprice, sellprice, settings);
-        shopMap.put(loc, shop);;
+        assert owner != null;
+        EzShop newShop = DatabaseManager.createShop(
+                loc, Bukkit.getOfflinePlayer(UUID.fromString(owner)), Utils.decodeItem(encodedItem), buyprice, sellprice,
+                msgtoggle, dbuy, dsell, new ArrayList<>(), shareincome, adminshop, rotation, new ArrayList<>());
+
+
+        shopMap.put(loc, newShop);;
     }
 
     public static PersistentDataContainer copyContainerData(PersistentDataContainer oldContainer, PersistentDataContainer newContainer) {
@@ -218,31 +213,7 @@ public class ShopContainer {
     }
 
     public static ShopSettings getShopSettings(Location loc) {
-        if (shopMap.containsKey(loc)) {
-            return shopMap.get(loc).getSettings();
-        } else {
-
-            //why we would need to use database data for getting settings? just setting them in database is enough
-            PersistentDataContainer dataContainer = Utils.getDataContainer(loc.getBlock());
-            String sloc = Utils.LocationtoString(loc);
-            boolean msgtoggle = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "msgtoggle"), PersistentDataType.INTEGER) == 1;
-            boolean dbuy = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "dbuy"), PersistentDataType.INTEGER) == 1;
-            boolean dsell = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER) == 1;
-            String admins = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING);
-            boolean shareincome = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER) == 1;
-            boolean adminshop = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "adminshop"), PersistentDataType.INTEGER) == 1;
-
-            String owner = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "owner"), PersistentDataType.STRING);
-            String encodedItem = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "item"), PersistentDataType.STRING);
-            double buyprice = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "buy"), PersistentDataType.DOUBLE);
-            double sellprice = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "sell"), PersistentDataType.DOUBLE);
-            String rotation = dataContainer.get(new NamespacedKey(EzChestShop.getPlugin(), "rotation"), PersistentDataType.STRING);
-            rotation = rotation == null ? Config.settings_defaults_rotation : rotation;
-            ShopSettings settings = new ShopSettings(sloc, msgtoggle, dbuy, dsell, admins, shareincome, adminshop, rotation, new ArrayList<>());
-            EzShop shop = new EzShop(loc, owner, Utils.decodeItem(encodedItem), buyprice, sellprice, settings);
-            shopMap.put(loc, shop);
-            return settings;
-        }
+        return shopMap.get(loc).getSettings();
     }
 
     public static void buyItem(Block containerBlock, double price, int count, ItemStack tthatItem, Player player, OfflinePlayer owner, PersistentDataContainer data) {
@@ -490,7 +461,7 @@ public class ShopContainer {
             PersistentDataContainer container = ((TileState) state).getPersistentDataContainer();
             container.set(new NamespacedKey(EzChestShop.getPlugin(), "owner"), PersistentDataType.STRING, newOwner.getUniqueId().toString());
             EzShop shop = getShop(loc);
-            shop.getSqlQueue().setChange(Changes.SHOP_OWNER, newOwner.getUniqueId().toString());
+            DatabaseManager.setShopOwner(loc, newOwner);
             shop.setOwner(newOwner);
             state.update();
         }
@@ -502,83 +473,14 @@ public class ShopContainer {
             PersistentDataContainer container = ((TileState) state).getPersistentDataContainer();
             container.set(new NamespacedKey(EzChestShop.getPlugin(), isBuyPrice ? "buy" : "sell"), PersistentDataType.DOUBLE, newPrice);
             EzShop shop = getShop(loc);
-            shop.getSqlQueue().setChange(isBuyPrice ? Changes.BUY_PRICE : Changes.SELL_PRICE, newPrice);
             if (isBuyPrice) {
+                DatabaseManager.setShopBuyPrice(loc, newPrice);
                 shop.setBuyPrice(newPrice);
             } else {
+                DatabaseManager.setShopSellPrice(loc, newPrice);
                 shop.setSellPrice(newPrice);
             }
             state.update();
         }
     }
-
-
-    public static void startSqlQueueTask() {
-        Bukkit.getScheduler().runTaskTimer(EzChestShop.getPlugin(), new Runnable() {
-            @Override
-            public void run() {
-
-                //now looping through all shops and executing mysql commands
-
-                for (EzShop shop : shopMap.values()) {
-                    if (shop.getSettings().getSqlQueue().isChanged()) {
-                        runSqlTask(shop, shop.getSettings().getSqlQueue());
-                    }
-                    if (shop.getSqlQueue().isChanged()) {
-                        runSqlTask(shop, shop.getSqlQueue());
-                    }
-                }
-
-            }
-        }, 0, 20 * 60); //for now leaving it as non-editable value
-    }
-
-    public static void saveSqlQueueCache() { //This part needs to change, it causes lag for big servers, have to save all changes in one query only!
-        for (EzShop shop : shopMap.values()) {
-            if (shop.getSettings().getSqlQueue().isChanged()) {
-                runSqlTask(shop, shop.getSettings().getSqlQueue());
-            }
-            if (shop.getSqlQueue().isChanged()) {
-                runSqlTask(shop, shop.getSqlQueue());
-            }
-        }
-    }
-
-    private static void runSqlTask(EzShop shop, SqlQueue queue) {
-        DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-        //ok then it's time to execute the mysql thingys
-        HashMap<Changes, Object> changes = queue.getChangesList();
-        String sloc = shop.getSettings().getSloc();
-        for (Changes change : changes.keySet()) {
-            Object valueObject = changes.get(change);
-
-            //mysql job / you can get the value using Changes.
-            if (change.theClass == String.class) {
-                //well its string
-                String value = (String) valueObject;
-                db.setString("location", sloc, change.databaseValue, "shopdata", value);
-
-            } else if (change.theClass == Boolean.class) {
-                //well its boolean
-                boolean value = (Boolean) valueObject;
-                db.setBool("location", sloc, change.databaseValue, "shopdata", value);
-            } else if (change.theClass == Double.class) {
-                //well its double
-                double value = (Double) valueObject;
-                db.setDouble("location", sloc, change.databaseValue, "shopdata", value);
-            }
-        }
-
-        //the last thing has to be clearing the SqlQueue object so don't remove this
-        queue.resetChangeList(shop.getSettings(), shop); //giving new shop settings to keep the queue updated
-
-    }
-
-/*
-
-            db.getDouble("location", sloc,
-                    "buyPrice", "shopdata");
-            db.getDouble("location", sloc,
-                    "sellPrice", "shopdata");
- */
 }

@@ -11,40 +11,36 @@ import java.util.UUID;
 
 public class EzShop {
 
+    private Long id;
     private Location location;
     private ShopSettings settings;
     private OfflinePlayer owner;
     private ItemStack shopItem;
     private double buyPrice;
     private double sellPrice;
-    private SqlQueue sqlQueue;
     private List<String> shopViewers = new ArrayList<>();
     private List<String> shopLoaders = new ArrayList<>();
 
 
 
-    public EzShop(Location location, OfflinePlayer owner, ItemStack shopItem, double buyPrice, double sellPrice, ShopSettings settings) {
+    public EzShop(Long id, Location location, OfflinePlayer owner, ItemStack shopItem, double buyPrice, double sellPrice, ShopSettings settings) {
+        this.id = id;
         this.location = location;
         this.owner = owner;
         this.shopItem = shopItem;
         this.buyPrice = buyPrice;
         this.sellPrice = sellPrice;
         this.settings = settings;
-        this.settings.assignShop(this);
-        this.settings.createSqlQueue();
-        this.createSqlQueue();
     }
 
-    public EzShop(Location location, String ownerID, ItemStack shopItem, double buyPrice, double sellPrice, ShopSettings settings) {
+    public EzShop(Long id, Location location, String ownerID, ItemStack shopItem, double buyPrice, double sellPrice, ShopSettings settings) {
+        this.id = id;
         this.location = location;
         this.owner = Bukkit.getOfflinePlayer(UUID.fromString(ownerID));
         this.shopItem = shopItem;
         this.buyPrice = buyPrice;
         this.sellPrice = sellPrice;
         this.settings = settings;
-        this.settings.assignShop(this);
-        this.settings.createSqlQueue();
-        this.createSqlQueue();
     }
 
     public Location getLocation() {
@@ -94,12 +90,6 @@ public class EzShop {
     public UUID getOwnerID() {
         return owner.getUniqueId();
     }
-    public SqlQueue getSqlQueue() {
-        return sqlQueue;
-    }
-    public void createSqlQueue() {
-        this.sqlQueue = new SqlQueue(this.getLocation(), getSettings(), this);
-    }
     public void setOwner(OfflinePlayer owner) {this.owner = owner;}
 
     public double getBuyPrice() {
@@ -116,5 +106,21 @@ public class EzShop {
 
     public void setSellPrice(double sellPrice) {
         this.sellPrice = sellPrice;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public OfflinePlayer getOwner() {
+        return owner;
+    }
+
+    public void setShopItem(ItemStack shopItem) {
+        this.shopItem = shopItem;
     }
 }

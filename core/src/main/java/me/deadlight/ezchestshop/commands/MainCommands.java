@@ -1,10 +1,10 @@
 package me.deadlight.ezchestshop.commands;
 import com.palmergames.bukkit.towny.utils.ShopPlotUtil;
 import me.deadlight.ezchestshop.data.Config;
-import me.deadlight.ezchestshop.data.DatabaseManager;
 import me.deadlight.ezchestshop.data.LanguageManager;
 import me.deadlight.ezchestshop.data.ShopContainer;
 import me.deadlight.ezchestshop.EzChestShop;
+import me.deadlight.ezchestshop.databases.DatabaseManager;
 import me.deadlight.ezchestshop.guis.SettingsGUI;
 import me.deadlight.ezchestshop.utils.BlockOutline;
 import me.deadlight.ezchestshop.utils.holograms.ShopHologram;
@@ -200,60 +200,11 @@ public class MainCommands implements CommandExecutor, TabCompleter {
                             if (blockState != null) {
                                 if (args[2].equalsIgnoreCase("add")) {
                                     if (args.length == 4) {
-                                        String adminString = ShopContainer
-                                                .getShopSettings(blockState.getLocation()).getAdmins();
-                                        List<String> adminList = new ArrayList<>();
-                                        if (adminString != null && !adminString.equalsIgnoreCase("none")) {
-                                            adminList = Arrays.asList(adminString
-                                                    .split("@")).stream().filter(s -> (s != null && !s.trim().equalsIgnoreCase(""))).map(s ->
-                                                    Bukkit.getOfflinePlayer(UUID.fromString(s)).getName())
-                                                    .collect(Collectors.toList());
-                                        }
-                                        String[] last = args[3].split(",");
-                                        List<String> online = Bukkit.getOnlinePlayers().stream().filter(p -> !player.getUniqueId().equals(p.getUniqueId())).map(HumanEntity::getName).collect(Collectors.toList());
-                                        online.removeAll(Arrays.asList(last));
-                                        online.removeAll(adminList);
-
-                                        if (args[3].endsWith(",")) {
-                                            for (String s : online) {
-                                                fList.add(Arrays.asList(last).stream().collect(Collectors.joining(",")) + "," + s);
-                                            }
-                                        } else {
-                                            String lastarg = last[last.length -1];
-                                            for (String s : online) {
-                                                if (s.startsWith(lastarg)) {
-                                                    last[last.length -1] = s;
-                                                    fList.add(Arrays.asList(last).stream().collect(Collectors.joining(",")));
-                                                }
-                                            }
-                                        }
+                                        //to be added later again
                                     }
                                 } else if (args[2].equalsIgnoreCase("remove")) {
                                     if (args.length == 4) {
-                                        String[] last = args[3].split(",");
-                                        String adminString = ShopContainer
-                                                .getShopSettings(blockState.getLocation()).getAdmins();
-                                        List<String> playerList = new ArrayList<>();
-                                        if (adminString != null && !adminString.equalsIgnoreCase("none")) {
-                                            playerList = Arrays.asList(adminString
-                                                    .split("@")).stream().filter(s -> (s != null && !s.trim().equalsIgnoreCase(""))).map(s ->
-                                                    Bukkit.getOfflinePlayer(UUID.fromString(s)).getName())
-                                                    .collect(Collectors.toList());
-                                            playerList.removeAll(Arrays.asList(last));
-                                        }
-                                        if (args[3].endsWith(",")) {
-                                            for (String s : playerList) {
-                                                fList.add(Arrays.asList(last).stream().collect(Collectors.joining(",")) + "," + s);
-                                            }
-                                        } else {
-                                            String lastarg = last[last.length -1];
-                                            for (String s : playerList) {
-                                                if (s.startsWith(lastarg)) {
-                                                    last[last.length -1] = s;
-                                                    fList.add(Arrays.asList(last).stream().collect(Collectors.joining(",")));
-                                                }
-                                            }
-                                        }
+                                        //to be added later again
                                     }
                                 }
                             }
@@ -389,7 +340,7 @@ public class MainCommands implements CommandExecutor, TabCompleter {
                             Utils.storeItem(thatItem, container);
                             state.update();
                             ShopContainer.createShop(target.getLocation(), player, thatItem, buyprice, sellprice, false,
-                                    isDbuy == 1, isDSell == 1, "none", true, false, Config.settings_defaults_rotation);
+                                    isDbuy == 1, isDSell == 1, new ArrayList<>(), true, false, Config.settings_defaults_rotation);
 
                             player.sendMessage(lm.shopCreated());
 
@@ -514,17 +465,14 @@ public class MainCommands implements CommandExecutor, TabCompleter {
                     } else if (args[2].equalsIgnoreCase("list")) {
                         BlockState blockState = getLookedAtBlockStateIfOwner(player, true, false, target);
                         if (blockState != null) {
-                            String adminString = ShopContainer.getShopSettings(
+                            List<String> adminList = ShopContainer.getShopSettings(
                                     blockState.getLocation()).getAdmins();
-                            if (adminString != null && !adminString.equalsIgnoreCase("none")) {
-                                List<String> adminList = Arrays.asList(adminString.split("@"));
-                                if (adminList != null && !adminList.isEmpty()) {
-                                    player.sendMessage(ChatColor.GREEN + "Admins:\n" + ChatColor.GRAY + " - " + ChatColor.YELLOW + adminList.stream().map(s -> Bukkit.getOfflinePlayer(
-                                            UUID.fromString(s)).getName()).collect(
-                                            Collectors.joining("\n" + ChatColor.GRAY + " - " + ChatColor.YELLOW)));
-                                } else {
-                                    player.sendMessage(ChatColor.GREEN + "Admins:\n" + ChatColor.GRAY + " - " + ChatColor.YELLOW + lm.nobodyStatusAdmins());
-                                }
+                            if (adminList != null || !adminList.isEmpty()) {
+
+                                player.sendMessage(ChatColor.GREEN + "Admins:\n" + ChatColor.GRAY + " - " + ChatColor.YELLOW + adminList.stream().map(s -> Bukkit.getOfflinePlayer(
+                                        UUID.fromString(s)).getName()).collect(
+                                        Collectors.joining("\n" + ChatColor.GRAY + " - " + ChatColor.YELLOW)));
+
                             }else {
                                 player.sendMessage(ChatColor.GREEN + "Admins:\n" + ChatColor.GRAY + " - " + ChatColor.YELLOW + lm.nobodyStatusAdmins());
                             }
@@ -641,7 +589,7 @@ public class MainCommands implements CommandExecutor, TabCompleter {
         BlockState blockState = getLookedAtBlockStateIfOwner(player, true, false, target);
         if (blockState != null) {
             ShopSettings settings = ShopContainer.getShopSettings(blockState.getLocation());
-            List<String> adminList = (settings.getAdmins() == null || settings.getAdmins().equalsIgnoreCase("none")) ? null : Arrays.asList(settings.getAdmins().split("@"));
+            List<String> adminList = settings.getAdmins();
             String adminString;
             if (adminList == null || adminList.isEmpty()) {
                 adminString = lm.nobodyStatusAdmins();
@@ -665,33 +613,14 @@ public class MainCommands implements CommandExecutor, TabCompleter {
             // owner confirmed
             PersistentDataContainer container = ((TileState) blockState).getPersistentDataContainer();
             ShopSettings settings = settingsHashMap.get(player.getUniqueId());
-            DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-            String sloc = Utils.LocationtoString(blockState.getLocation());
-            String admins = settings.getAdmins() == null ? "none" : settings.getAdmins();
-            db.setBool("location", sloc,
-                    "msgToggle", "shopdata", settings.isMsgtoggle());
-            db.setBool("location", sloc,
-                    "buyDisabled", "shopdata", settings.isDbuy());
-            db.setBool("location", sloc,
-                    "sellDisabled", "shopdata", settings.isDbuy());
-            db.setString("location", sloc,
-                    "admins", "shopdata", admins);
-            db.setBool("location", sloc,
-                    "shareIncome", "shopdata", settings.isShareincome());
-            db.setString("location", sloc,
-                    "rotation", "shopdata", settings.getRotation());
-            container.set(new NamespacedKey(EzChestShop.getPlugin(), "msgtoggle"), PersistentDataType.INTEGER,
-                    settings.isMsgtoggle() ? 1 : 0);
-            container.set(new NamespacedKey(EzChestShop.getPlugin(), "dbuy"), PersistentDataType.INTEGER,
-                    settings.isDbuy() ? 1 : 0);
-            container.set(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER,
-                    settings.isDsell() ? 1 : 0);
-            container.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING,
-                    admins);
-            container.set(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER,
-                    settings.isShareincome() ? 1 : 0);
-            container.set(new NamespacedKey(EzChestShop.getPlugin(), "rotation"), PersistentDataType.STRING,
-                    settings.getRotation());
+            String sloc = Utils.locationToString(blockState.getLocation());
+            List<String> admins = settings.getAdmins();
+            DatabaseManager.setShopMessageToggle(blockState.getLocation(), settings.isMsgtoggle());
+            DatabaseManager.setShopDisableBuyOption(blockState.getLocation(), settings.isDbuy());
+            DatabaseManager.setShopDisableSellOption(blockState.getLocation(), settings.isDsell());
+            DatabaseManager.setShopAdmins(blockState.getLocation(), admins);
+            DatabaseManager.setShopShareIncomeOption(blockState.getLocation(), settings.isShareincome());
+            DatabaseManager.setShopRotation(blockState.getLocation(), settings.getRotation());
             ShopHologram shopHologram = ShopHologram.getHologram(blockState.getLocation(), player);
             shopHologram.updatePosition();
             shopHologram.updateDsell();
@@ -703,7 +632,6 @@ public class MainCommands implements CommandExecutor, TabCompleter {
             newSettings.setAdmins(settings.getAdmins());
             newSettings.setShareincome(settings.isShareincome());
             newSettings.setRotation(settings.getRotation());
-            blockState.update();
             player.sendMessage(lm.pastedShopSettings());
 
         }
@@ -715,60 +643,41 @@ public class MainCommands implements CommandExecutor, TabCompleter {
             // owner confirmed
             PersistentDataContainer container = ((TileState) blockState).getPersistentDataContainer();
             ShopSettings settings = settingsHashMap.get(player.getUniqueId());
-            DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-            String sloc = Utils.LocationtoString(blockState.getLocation());
+            String sloc = Utils.locationToString(blockState.getLocation());
 
             for (String arg : args.split(",")) {
                 ShopSettings newSettings = ShopContainer.getShopSettings(blockState.getLocation());
                 switch (arg) {
                     case "toggle-message": {
-                        db.setBool("location", sloc,
-                                "msgToggle", "shopdata", settings.isMsgtoggle());
-                        container.set(new NamespacedKey(EzChestShop.getPlugin(), "msgtoggle"), PersistentDataType.INTEGER,
-                                settings.isMsgtoggle() ? 1 : 0);
+                        DatabaseManager.setShopMessageToggle(blockState.getLocation(), settings.isMsgtoggle());
                         newSettings.setMsgtoggle(settings.isMsgtoggle());
                         break;
                     }
                     case "toggle-buying": {
-                        db.setBool("location", sloc,
-                                "buyDisabled", "shopdata", settings.isDbuy());
-                        container.set(new NamespacedKey(EzChestShop.getPlugin(), "dbuy"), PersistentDataType.INTEGER,
-                                settings.isDbuy() ? 1 : 0);
+                        DatabaseManager.setShopDisableBuyOption(blockState.getLocation(), settings.isDbuy());
                         newSettings.setDbuy(settings.isDbuy());
                         ShopHologram.getHologram(blockState.getLocation(), player).updateDbuy();
                         break;
                     }
                     case "toggle-selling": {
-                        db.setBool("location", sloc,
-                                "sellDisabled", "shopdata", settings.isDsell());
-                        container.set(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER,
-                                settings.isDsell() ? 1 : 0);
+                        DatabaseManager.setShopDisableSellOption(blockState.getLocation(), settings.isDsell());
                         newSettings.setDsell(settings.isDsell());
                         ShopHologram.getHologram(blockState.getLocation(), player).updateDsell();
                         break;
                     }
                     case "admins": {
-                        String admins = settings.getAdmins() == null ? "none" : settings.getAdmins();
-                        db.setString("location", sloc,
-                                "admins", "shopdata", admins);
-                        container.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING,
-                                admins);
+                        List<String> admins = settings.getAdmins();
+                        DatabaseManager.setShopAdmins(blockState.getLocation(), admins);
                         newSettings.setAdmins(settings.getAdmins());
                         break;
                     }
                     case "toggle-shared-income": {
-                        db.setBool("location", sloc,
-                                "shareIncome", "shopdata", settings.isShareincome());
-                        container.set(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER,
-                                settings.isShareincome() ? 1 : 0);
+                        DatabaseManager.setShopShareIncomeOption(blockState.getLocation(), settings.isShareincome());
                         newSettings.setShareincome(settings.isShareincome());
                         break;
                     }
                     case "change-rotation": {
-                        db.setString("location", sloc,
-                                "rotation", "shopdata", settings.getRotation());
-                        container.set(new NamespacedKey(EzChestShop.getPlugin(), "rotation"), PersistentDataType.STRING,
-                                settings.getRotation());
+                        DatabaseManager.setShopRotation(blockState.getLocation(), settings.getRotation());
                         ShopHologram.getHologram(blockState.getLocation(), player).updatePosition();
                         newSettings.setRotation(settings.getRotation());
                         break;
@@ -785,17 +694,13 @@ public class MainCommands implements CommandExecutor, TabCompleter {
         BlockState blockState = getLookedAtBlockStateIfOwner(player, true, false, target);
         if (blockState != null) {
             ShopSettings settings = ShopContainer.getShopSettings(blockState.getLocation());
-            DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-            String sloc = Utils.LocationtoString(blockState.getLocation());
+            String sloc = Utils.locationToString(blockState.getLocation());
             PersistentDataContainer container = ((TileState) blockState).getPersistentDataContainer();
             ShopHologram shopHologram = ShopHologram.getHologram(blockState.getLocation(), player);
             switch (type) {
                 case DBUY:
                     settings.setDbuy(data.equals("") ? !settings.isDbuy() : data.equals("true"));
-                    db.setBool("location", sloc,
-                            "buyDisabled", "shopdata", settings.isDbuy());
-                    container.set(new NamespacedKey(EzChestShop.getPlugin(), "dbuy"), PersistentDataType.INTEGER,
-                            settings.isDbuy() ? 1: 0);
+                    DatabaseManager.setShopDisableBuyOption(blockState.getLocation(), settings.isDbuy());
                     if (settings.isDbuy()) {
                         player.sendMessage(lm.disableBuyingOnInChat());
                     } else {
@@ -805,10 +710,7 @@ public class MainCommands implements CommandExecutor, TabCompleter {
                     break;
                 case DSELL:
                     settings.setDsell(data.equals("") ? !settings.isDsell() : data.equals("true"));
-                    db.setBool("location", sloc,
-                            "sellDisabled", "shopdata", settings.isDsell());
-                    container.set(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER,
-                            settings.isDsell() ? 1 : 0);
+                    DatabaseManager.setShopDisableSellOption(blockState.getLocation(), settings.isDsell());
                     if (settings.isDsell()) {
                         player.sendMessage(lm.disableSellingOnInChat());
                     } else {
@@ -817,75 +719,10 @@ public class MainCommands implements CommandExecutor, TabCompleter {
                     shopHologram.updateDsell();
                     break;
                 case ADMINS:
-                    if (data.equalsIgnoreCase("clear")) {
-                        data = null;
-                        player.sendMessage(lm.clearedAdmins());
-                    } else if (data.startsWith("+")) {
-                        data = data.replace("+", "");
-                        List<UUID> oldData = (settings.getAdmins() == null || settings.getAdmins().equals("none")) ? new ArrayList<>() :
-                                new ArrayList<>(Arrays.asList(settings.getAdmins().split("@")))
-                                        .stream().map(UUID::fromString).collect(Collectors.toList());
-                        List<UUID> newPlayers = Arrays.asList(data.split(",")).stream().map(p -> Bukkit.getOfflinePlayer(p))
-                                .filter(p -> p.hasPlayedBefore()).map(p -> p.getUniqueId()).filter(id -> !oldData.contains(id)).collect(Collectors.toList());
-                        String newData = newPlayers.stream().map(s -> s.toString()).collect(Collectors.joining("@"));
-                        if (newData != null && !newData.equalsIgnoreCase("")) {
-                            if (!newPlayers.contains(player.getUniqueId())) {
-                                if (settings.getAdmins() == null || settings.getAdmins().equalsIgnoreCase("")) {
-                                    data = newData;
-                                } else {
-                                    data = settings.getAdmins() + "@" + newData;
-                                }
-                                player.sendMessage(lm.sucAdminAdded(newPlayers.stream()
-                                        .map(s -> Bukkit.getOfflinePlayer(s).getName())
-                                        .collect(Collectors.joining(", "))));
-                            } else {
-                                data = settings.getAdmins();
-                                player.sendMessage(lm.selfAdmin());
-                            }
-                        } else {
-                            data = settings.getAdmins();
-                            player.sendMessage(lm.noPlayer());
-                        }
-
-                    } else if (data.startsWith("-")) {
-                        data = data.replace("-", "");
-                        List<String> oldData = (settings.getAdmins() == null || settings.getAdmins().equalsIgnoreCase("none"))
-                                ? new ArrayList<>() : new ArrayList<>(Arrays.asList(settings.getAdmins().split("@")));
-                        List<UUID> newPlayers= new ArrayList<>(Arrays.asList(data.split(",")).stream().map(p -> Bukkit.getOfflinePlayer(p))
-                                .filter(p -> p.hasPlayedBefore()).map(p -> p.getUniqueId()).collect(Collectors.toList()));
-                        if (newPlayers != null && !newPlayers.isEmpty()) {
-                            List<String> newData = newPlayers.stream().map(p -> p.toString()).collect(Collectors.toList());
-                            oldData.removeAll(newData);
-                            data = oldData.stream().collect(Collectors.joining("@"));
-                            player.sendMessage(lm.sucAdminRemoved(newPlayers.stream()
-                                    .map(s -> Bukkit.getOfflinePlayer(s).getName())
-                                    .collect(Collectors.joining(", "))));
-                            if (data.trim().equalsIgnoreCase("")) {
-                                data = null;
-                            }
-                        } else {
-                            data = settings.getAdmins();
-                            player.sendMessage(lm.noPlayer());
-                        }
-                    }
-                    if (data == null || data.equalsIgnoreCase("none")) {
-                        data = null;
-                    } else if (data.contains("none@")) {
-                        data = data.replace("none@", "");
-                    }
-                    settings.setAdmins(data);
-                    String admins = settings.getAdmins() == null ? "none" : settings.getAdmins();
-                    db.setString("location", sloc,
-                            "admins", "shopdata", admins);
-                    container.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING,
-                            admins);
-                    break;
+                    //I'm nuking this section literally unreadable
                 case TOGGLE_MSG:
                     settings.setMsgtoggle(!settings.isMsgtoggle());
-                    db.setBool("location", sloc,
-                            "msgToggle", "shopdata", settings.isMsgtoggle());
-                    container.set(new NamespacedKey(EzChestShop.getPlugin(), "msgtoggle"), PersistentDataType.INTEGER,
-                            settings.isMsgtoggle() ? 1 : 0);
+                    DatabaseManager.setShopMessageToggle(blockState.getLocation(), settings.isMsgtoggle());
                     if (settings.isMsgtoggle()) {
                         player.sendMessage(lm.toggleTransactionMessageOnInChat());
                     } else {
@@ -894,10 +731,7 @@ public class MainCommands implements CommandExecutor, TabCompleter {
                     break;
                 case SHAREINCOME:
                     settings.setShareincome(!settings.isShareincome());
-                    db.setBool("location", sloc,
-                            "shareIncome", "shopdata", settings.isShareincome());
-                    container.set(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER,
-                            settings.isShareincome() ? 1 : 0);
+                    DatabaseManager.setShopShareIncomeOption(blockState.getLocation(), settings.isShareincome());
                     if (settings.isShareincome()) {
                         player.sendMessage(lm.sharedIncomeOnInChat());
                     } else {
@@ -906,10 +740,7 @@ public class MainCommands implements CommandExecutor, TabCompleter {
                     break;
                 case ROTATION:
                     settings.setRotation(Utils.rotations.contains(data) ? data : Utils.getNextRotation(settings.getRotation()));
-                    db.setString("location", sloc,
-                            "rotation", "shopdata", settings.getRotation());
-                    container.set(new NamespacedKey(EzChestShop.getPlugin(), "rotation"), PersistentDataType.STRING,
-                            settings.getRotation());
+                    DatabaseManager.setShopRotation(blockState.getLocation(), settings.getRotation());
                     player.sendMessage(lm.rotateHologramInChat(settings.getRotation()));
                     ShopHologram.getHologram(blockState.getLocation(), player).updatePosition();
                     break;

@@ -123,12 +123,8 @@ public class ChatListener implements Listener {
         if (!admins.contains(answerUUID)) {
 
             admins.add(answerUUID);
-            String adminsString = convertListUUIDtoString(admins);
-            TileState state = ((TileState)chest.getState());
-            PersistentDataContainer data = state.getPersistentDataContainer();
-            data.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING, adminsString);
-            state.update();
-            ShopContainer.getShopSettings(chest.getLocation()).setAdmins(adminsString);
+
+            ShopContainer.getShopSettings(chest.getLocation()).setUUIDAdmins(admins);
             player.sendMessage(lm.sucAdminAdded(answer));
 
 
@@ -152,48 +148,13 @@ public class ChatListener implements Listener {
                 player.sendMessage(lm.sucAdminRemoved(answer));
                 return;
             }
-            String adminsString = convertListUUIDtoString(admins);
-            PersistentDataContainer data = state.getPersistentDataContainer();
-            data.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING, adminsString);
-            state.update();
-            ShopContainer.getShopSettings(chest.getLocation()).setAdmins(adminsString);
+            ShopContainer.getShopSettings(chest.getLocation()).setUUIDAdmins(admins);
             player.sendMessage(lm.sucAdminRemoved(answer));
 
         } else {
             player.sendMessage(lm.notInAdminList());
         }
     }
-
-
-
-
-
-    public String convertListUUIDtoString(List<UUID> uuidList) {
-        StringBuilder finalString = new StringBuilder();
-        boolean first = false;
-        if (uuidList.size() == 0) {
-            return "none";
-        }
-        for (UUID uuid : uuidList) {
-            if (first) {
-
-                finalString.append("@").append(uuid.toString());
-
-            } else {
-                first = true;
-                finalString = new StringBuilder(uuid.toString());
-            }
-        }
-        //if there is no admins, then set the string to none
-        if (finalString.toString().equalsIgnoreCase("")) {
-            finalString = new StringBuilder("none");
-        }
-        return finalString.toString();
-    }
-
-
-
-
 
 }
 

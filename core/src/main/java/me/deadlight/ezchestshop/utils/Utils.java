@@ -3,10 +3,7 @@ import dev.triumphteam.gui.guis.Gui;
 import dev.triumphteam.gui.guis.GuiItem;
 import dev.triumphteam.gui.guis.PaginatedGui;
 import me.deadlight.ezchestshop.data.Config;
-import me.deadlight.ezchestshop.data.DatabaseManager;
 import me.deadlight.ezchestshop.data.LanguageManager;
-import me.deadlight.ezchestshop.data.mysql.MySQL;
-import me.deadlight.ezchestshop.data.sqlite.SQLite;
 import me.deadlight.ezchestshop.data.ShopContainer;
 import me.deadlight.ezchestshop.enums.Database;
 import me.deadlight.ezchestshop.EzChestShop;
@@ -59,7 +56,6 @@ public class Utils {
     private static String discordLink;
 
     public static VersionUtils versionUtils;
-    public static DatabaseManager databaseManager;
 
     static {
         try {
@@ -271,7 +267,7 @@ public class Utils {
      * @param loc
      * @return
      */
-    public static String LocationtoString(Location loc) {
+    public static String locationToString(Location loc) {
         if (loc == null)
             return null;
         String sloc = "";
@@ -942,25 +938,6 @@ public class Utils {
 
     }
 
-    public static void recognizeDatabase() {
-        if (Config.database_type == Database.SQLITE) {
-            EzChestShop.logConsole("&c[&eEzChestShop&c] &eInitializing SQLite database...");
-            //initialize SQLite
-            databaseManager = new SQLite(EzChestShop.getPlugin());
-            databaseManager.load();
-            EzChestShop.logConsole("&c[&eEzChestShop&c] &aSQLite &7database initialized!");
-
-        } else if (Config.database_type == Database.MYSQL) {
-            EzChestShop.logConsole("&c[&eEzChestShop&c] &eInitializing MySQL database...");
-            //initialize MySQL
-            databaseManager = new MySQL(EzChestShop.getPlugin());
-            databaseManager.load();
-            EzChestShop.logConsole("&c[&eEzChestShop&c] &aMySQL &7database initialized!");
-        } else {
-            //shouldn't happen technically
-        }
-    }
-
     public static void addItemIfEnoughSlots (Gui gui,int slot, GuiItem item){
         if ((gui.getRows() * 9) > slot) {
             gui.setItem(slot, item);
@@ -1002,26 +979,10 @@ public class Utils {
     public static List<UUID> getAdminsForShop(EzShop shop) {
         List<UUID> admins = new ArrayList<>();
         admins.add(shop.getOwnerID());
-        String adminsString = shop.getSettings().getAdmins();
-        if (adminsString == null) {
+        List<String> adminsString = shop.getSettings().getAdmins();
+        if (adminsString == null || adminsString.isEmpty()) {
             return admins;
         }
-        String[] adminList = adminsString.split("@");
-        for (String admin : adminList) {
-            if (!admin.equalsIgnoreCase("") && !admin.equalsIgnoreCase(" ") && !admin.equalsIgnoreCase("null") && !admin.equalsIgnoreCase("NULL")) {
-                //check if its a valid uuid
-                boolean isValid = true;
-                try {
-                    UUID.fromString(admin);
-                } catch (IllegalArgumentException exception) {
-                    isValid = false;
-                }
-                if (isValid) {
-                    admins.add(UUID.fromString(admin));
-                }
-            }
-        }
-
         return admins;
     }
 
@@ -1113,7 +1074,6 @@ public class Utils {
         container.set(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER, shop.getSettings().isDsell() ?
                 (shop.getSellPrice() == 0 ? 1 : (Config.settings_defaults_dsell ? 1 : 0))
                 : (Config.settings_defaults_dsell ? 1 : 0));
-        container.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING, shop.getSettings().getAdmins());
         container.set(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER, shop.getSettings().isShareincome() ? 1 : 0);
         //container.set(new NamespacedKey(EzChestShop.getPlugin(), "trans"), PersistentDataType.STRING, "none");
         container.set(new NamespacedKey(EzChestShop.getPlugin(), "adminshop"), PersistentDataType.INTEGER, shop.getSettings().isAdminshop() ? 1 : 0);
@@ -1122,10 +1082,5 @@ public class Utils {
         return true;
 
     }
-
-
-//    public static Object getRequestedData(Contain) {
-//
-//    }
 
 }

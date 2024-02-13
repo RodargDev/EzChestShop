@@ -1,12 +1,11 @@
 package me.deadlight.ezchestshop;
-import me.deadlight.ezchestshop.commands.CommandCheckProfits;
 import me.deadlight.ezchestshop.commands.EcsAdmin;
 import me.deadlight.ezchestshop.commands.MainCommands;
 import me.deadlight.ezchestshop.data.Config;
-import me.deadlight.ezchestshop.data.DatabaseManager;
 import me.deadlight.ezchestshop.data.gui.GuiData;
 import me.deadlight.ezchestshop.data.LanguageManager;
 import me.deadlight.ezchestshop.data.ShopContainer;
+import me.deadlight.ezchestshop.databases.DatabaseManager;
 import me.deadlight.ezchestshop.integrations.AdvancedRegionMarket;
 import me.deadlight.ezchestshop.listeners.*;
 import me.deadlight.ezchestshop.tasks.LoadedChunksTask;
@@ -61,7 +60,7 @@ public final class EzChestShop extends JavaPlugin {
 
         // load database
         if (Config.database_type != null) {
-            Utils.recognizeDatabase();
+            DatabaseManager.initializeDatabase();
         } else {
             logConsole(
                     "&c[&eEzChestShop&c] &cDatabase type not specified/or is wrong in config.yml! Disabling plugin...");
@@ -267,7 +266,6 @@ public final class EzChestShop extends JavaPlugin {
         }
 
         ShopContainer.queryShopsToMemory();
-        ShopContainer.startSqlQueueTask();
         if (Config.check_for_removed_shops) {
             LoadedChunksTask.startTask();
         }
@@ -283,7 +281,6 @@ public final class EzChestShop extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerTransactionListener(), this);
         getServer().getPluginManager().registerEvents(new ChatListener(), this);
         getServer().getPluginManager().registerEvents(new BlockPistonExtendListener(), this);
-        getServer().getPluginManager().registerEvents(new CommandCheckProfits(), this);
         getServer().getPluginManager().registerEvents(new UpdateChecker(), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(), this);
         getServer().getPluginManager().registerEvents(new ChestShopBreakPrevention(), this);
@@ -318,13 +315,11 @@ public final class EzChestShop extends JavaPlugin {
         }
         ecs.setExecutor(new MainCommands());
         ecsadmin.setExecutor(new EcsAdmin());
-        getCommand("checkprofits").setExecutor(new CommandCheckProfits());
     }
 
     private void registerTabCompleters() {
         getCommand("ecs").setTabCompleter(new MainCommands());
         getCommand("ecsadmin").setTabCompleter(new EcsAdmin());
-        getCommand("checkprofits").setTabCompleter(new CommandCheckProfits());
     }
 
     @Override
@@ -332,9 +327,8 @@ public final class EzChestShop extends JavaPlugin {
         // Plugin shutdown logic
         getServer().getScheduler().cancelTasks(this);
         logConsole("&c[&eEzChestShop&c] &bSaving remained sql cache...");
-        ShopContainer.saveSqlQueueCache();
 
-        getDatabase().disconnect();
+        DatabaseManager.closeDatabase();
 
         logConsole("&c[&eEzChestShop&c] &aCompleted. ");
 
@@ -399,10 +393,6 @@ public final class EzChestShop extends JavaPlugin {
 
     public static Economy getEconomy() {
         return econ;
-    }
-
-    public DatabaseManager getDatabase() {
-        return Utils.databaseManager;
     }
 
 }

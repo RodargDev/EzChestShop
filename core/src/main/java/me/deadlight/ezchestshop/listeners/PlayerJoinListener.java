@@ -1,9 +1,7 @@
 package me.deadlight.ezchestshop.listeners;
 
 import me.deadlight.ezchestshop.data.Config;
-import me.deadlight.ezchestshop.data.DatabaseManager;
 import me.deadlight.ezchestshop.data.LanguageManager;
-import me.deadlight.ezchestshop.data.sqlite.SQLite;
 import me.deadlight.ezchestshop.EzChestShop;
 import me.deadlight.ezchestshop.utils.BlockOutline;
 import me.deadlight.ezchestshop.utils.Utils;
@@ -33,16 +31,6 @@ public class PlayerJoinListener implements Listener {
          *
          * @param evt
          */
-        DatabaseManager db = EzChestShop.getPlugin().getDatabase();
-        UUID uuid = event.getPlayer().getUniqueId();
-        SQLite.playerTables.forEach(t -> {
-            if (db.hasTable(t)) {
-                if (!db.hasPlayer(t, uuid)) {
-                    db.preparePlayerData(t, uuid.toString());
-                }
-            }
-        });
-
 
         if (Config.emptyShopNotificationOnJoin) {
             List<Block> blocks = Utils.getNearbyEmptyShopForAdmins(player);
