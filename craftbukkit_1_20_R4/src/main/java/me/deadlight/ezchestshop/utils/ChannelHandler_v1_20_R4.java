@@ -43,7 +43,7 @@ public class ChannelHandler_v1_20_R4 extends ChannelInboundHandlerAdapter {
             ServerboundInteractPacket packet = (ServerboundInteractPacket) msg;
             Field field;
             try {
-                field = packet.getClass().getDeclaredField("a"); //The field a is entity ID
+                field = packet.getClass().getDeclaredField("b"); //The field b is entity ID
             } catch (NoSuchFieldException e) {
                 ctx.fireChannelRead(msg);
                 return; //This is for ModelEngine
