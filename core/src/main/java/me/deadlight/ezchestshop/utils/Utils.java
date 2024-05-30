@@ -64,7 +64,7 @@ public class Utils {
     static {
         try {
             if (isFolia()) {
-                versionUtils = (VersionUtils) Class.forName("me.deadlight.ezchestshop.utils.v1_20_R3").newInstance();
+                versionUtils = (VersionUtils) Class.forName("me.deadlight.ezchestshop.utils.v1_20_R4").newInstance();
             } else {
                 String packageName = Utils.class.getPackage().getName();
                 String internalsName = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];

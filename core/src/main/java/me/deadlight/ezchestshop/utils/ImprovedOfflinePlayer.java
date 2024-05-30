@@ -17,7 +17,7 @@ public abstract class ImprovedOfflinePlayer {
         try {
 
             if (Utils.isFolia()) {
-                improvedOfflinePlayer = (ImprovedOfflinePlayer) Class.forName("me.deadlight.ezchestshop.utils.ImprovedOfflinePlayer_v1_20_R3").newInstance();
+                improvedOfflinePlayer = (ImprovedOfflinePlayer) Class.forName("me.deadlight.ezchestshop.utils.ImprovedOfflinePlayer_v1_20_R4").newInstance();
             } else {
                 String packageName = Utils.class.getPackage().getName();
                 String internalsName = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];

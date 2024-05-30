@@ -13,17 +13,16 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.RelativeMovement;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Shulker;
 import net.minecraft.world.level.Level;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
-import org.bukkit.craftbukkit.v1_20_R3.inventory.CraftItemStack;
-import org.bukkit.craftbukkit.v1_20_R3.util.CraftChatMessage;
+import org.bukkit.craftbukkit.v1_20_R4.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R4.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R4.inventory.CraftItemStack;
+import org.bukkit.craftbukkit.v1_20_R4.util.CraftChatMessage;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -33,7 +32,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class v1_20_R3 extends VersionUtils {
+public class v1_20_R4 extends VersionUtils {
 
     private static final Map<SignMenuFactory, UpdateSignListener> listeners = new HashMap<>();
     private static Map<Integer, Entity> entities = new HashMap<>();
@@ -196,7 +195,7 @@ public class v1_20_R3 extends VersionUtils {
 
     @Override
     void openMenu(SignMenuFactory.Menu menu, Player player) {
-        MenuOpener_v1_20_R3.openMenu(menu, player);
+        MenuOpener_v1_20_R4.openMenu(menu, player);
     }
 
     @Override
@@ -204,7 +203,7 @@ public class v1_20_R3 extends VersionUtils {
         Field field = ((CraftPlayer) player).getHandle().connection.getClass().getSuperclass().getDeclaredField("c");
         field.setAccessible(true);
         Connection netManager = (Connection) field.get(((CraftPlayer) player).getHandle().connection);
-        netManager.channel.pipeline().addBefore("packet_handler", "ecs_listener", new ChannelHandler_v1_20_R3(player));
+        netManager.channel.pipeline().addBefore("packet_handler", "ecs_listener", new ChannelHandler_v1_20_R4(player));
     }
 
     @Override

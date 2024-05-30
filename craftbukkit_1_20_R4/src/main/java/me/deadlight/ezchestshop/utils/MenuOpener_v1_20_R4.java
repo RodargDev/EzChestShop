@@ -9,13 +9,13 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_20_R4.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Objects;
 
-public class MenuOpener_v1_20_R3 {
+public class MenuOpener_v1_20_R4 {
 
     private static Constructor<ClientboundBlockEntityDataPacket> constructor;
 
