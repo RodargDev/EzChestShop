@@ -60,13 +60,27 @@ public class Utils {
 
     static {
         try {
-            String packageName = Utils.class.getPackage().getName();
-            String internalsName = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
-            versionUtils = (VersionUtils) Class.forName(packageName + "." + internalsName).newInstance();
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
-                | ClassCastException exception) {
-            Bukkit.getLogger().log(Level.SEVERE,
-                    "EzChestShop could not find a valid implementation for this server version.");
+            if (isFolia()) {
+                versionUtils = (VersionUtils) Class.forName("me.deadlight.ezchestshop.utils.v1_20_R3").newInstance();
+            } else {
+                String packageName = Utils.class.getPackage().getName();
+                String internalsName = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+                versionUtils = (VersionUtils) Class.forName(packageName + "." + internalsName).newInstance();
+            }
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | ClassCastException exception) {
+            Bukkit.getLogger().log(Level.SEVERE, "EzChestShop could not find a valid implementation for this server version.");
+        }
+    }
+
+
+
+
+    static boolean isFolia() {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
         }
     }
 
@@ -165,6 +179,374 @@ public class Utils {
         return max.get();
     }
 
+    //
+
+    /**
+     * Split a String by "_" and capitalize each First word, then join them together
+     * via " "
+     *
+     * @param string
+     * @return
+     */
+    public static String capitalizeFirstSplit(String string) {
+        string = string.toLowerCase();
+        String n_string = "";
+        for (String s : string.split("_")) {
+            n_string += s.subSequence(0, 1).toString().toUpperCase()
+                    + s.subSequence(1, s.length()).toString().toLowerCase() + " ";
+        }
+        return n_string;
+    }
+
+    public static boolean hasEnoughSpace(Player player, int amount, ItemStack item) {
+        int emptySlots = 0;
+        for (ItemStack content : player.getInventory().getStorageContents()) {
+            if (content == null || content.getType() == Material.AIR) {
+                emptySlots += item.getMaxStackSize();
+            } else {
+                if (isSimilar(content, item) && !(content.getAmount() >= content.getMaxStackSize())) {
+
+                    int remaining = content.getMaxStackSize() - content.getAmount();
+                    emptySlots += remaining;
+
+                }
+            }
+        }
+
+        return emptySlots >= amount;
+    }
+
+    public static int playerEmptyCount(ItemStack[] storageContents, ItemStack item) {
+        int emptySlots = 0;
+        for (ItemStack content : storageContents) {
+            if (content == null || content.getType() == Material.AIR) {
+                emptySlots += item.getMaxStackSize();
+            } else {
+                if (isSimilar(content, item) && !(content.getAmount() >= content.getMaxStackSize())) {
+
+                    int remaining = content.getMaxStackSize() - content.getAmount();
+                    emptySlots += remaining;
+
+                }
+            }
+        }
+        return emptySlots;
+    }
+
+    public static int containerEmptyCount(ItemStack[] storageContents, ItemStack item) {
+
+        if (storageContents == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        int emptySlots = 0;
+        for (ItemStack content : storageContents) {
+            if (content == null || content.getType() == Material.AIR) {
+                emptySlots += item.getMaxStackSize();
+            } else {
+                if (isSimilar(content, item) && !(content.getAmount() >= content.getMaxStackSize())) {
+
+                    int remaining = content.getMaxStackSize() - content.getAmount();
+                    emptySlots += remaining;
+
+                }
+            }
+        }
+        return emptySlots;
+    }
+
+    public static int howManyOfItemExists(ItemStack[] itemStacks, ItemStack mainItem) {
+
+        if (itemStacks == null) {
+            return Integer.MAX_VALUE;
+        }
+
+        int amount = 0;
+        for (ItemStack item : itemStacks) {
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+            if (isSimilar(item, mainItem)) {
+                amount += item.getAmount();
+            }
+
+        }
+        return amount;
+
+    }
+
+    public static boolean containerHasEnoughSpace(Inventory container, int amount, ItemStack item) {
+        int emptySlots = 0;
+        for (ItemStack content : container.getStorageContents()) {
+            if (content == null || content.getType() == Material.AIR) {
+                emptySlots += item.getMaxStackSize();
+            } else {
+                if (isSimilar(content, item) && !(content.getAmount() >= content.getMaxStackSize())) {
+
+                    int remaining = content.getMaxStackSize() - content.getAmount();
+                    emptySlots += remaining;
+
+                }
+            }
+        }
+
+        return emptySlots >= amount;
+    }
+
+    public static boolean amountCheck(int amount) {
+        if (amount == 0) {
+            return false;
+        }
+
+        if (amount < 0) {
+            return false;
+        }
+        return true;
+    }
+
+    public static List<String> calculatePossibleAmount(OfflinePlayer offlineCustomer, OfflinePlayer offlineSeller,
+                                                       ItemStack[] playerInventory, ItemStack[] storageInventory, double eachBuyPrice, double eachSellPrice,
+                                                       ItemStack itemStack) {
+
+        List<String> results = new ArrayList<>();
+
+        String buyCount = calculateBuyPossibleAmount(offlineCustomer, playerInventory, storageInventory, eachBuyPrice,
+                itemStack);
+        String sellCount = calculateSellPossibleAmount(offlineSeller, playerInventory, storageInventory, eachSellPrice,
+                itemStack);
+
+        results.add(buyCount);
+        results.add(sellCount);
+        return results;
+    }
+
+    public static String calculateBuyPossibleAmount(OfflinePlayer offlinePlayer, ItemStack[] playerInventory,
+                                                    ItemStack[] storageInventory, double eachBuyPrice, ItemStack itemStack) {
+        // I was going to run this in async but maybe later...
+        int possibleCount = 0;
+        double buyerBalance =
+                Config.useXP ? XPEconomy.getXP(offlinePlayer) : EzChestShop.getEconomy().getBalance(offlinePlayer);
+        int emptyCount = playerEmptyCount(playerInventory, itemStack);
+        int howManyExists = howManyOfItemExists(storageInventory, itemStack);
+
+        for (int num = 0; num < emptyCount; num++) {
+            if (possibleCount + 1 > howManyExists) {
+                break;
+            }
+            possibleCount += 1;
+        }
+
+        int result = 0;
+        for (int num = 0; num < possibleCount; num++) {
+            result += 1;
+            if ((num + 1) * eachBuyPrice > buyerBalance) {
+                return String.valueOf(num);
+            }
+        }
+
+        return String.valueOf(result);
+    }
+
+    public static HashMap<OfflinePlayer, Boolean> hasPlayedBefore = new HashMap<>();
+    public static boolean hasPlayedBefore(OfflinePlayer player) {
+        if (player == null) {
+            return false;
+        }
+        if (hasPlayedBefore.containsKey(player)) {
+            return hasPlayedBefore.get(player);
+        } else {
+            boolean result = player.hasPlayedBefore();
+            hasPlayedBefore.put(player, result);
+            return result;
+        }
+    }
+
+    public static String calculateSellPossibleAmount(OfflinePlayer offlinePlayer, ItemStack[] playerInventory,
+                                                     ItemStack[] storageInventory, double eachSellPrice, ItemStack itemStack) {
+
+        int possibleCount = 0;
+        double buyerBalance;
+        if (offlinePlayer == null) {
+            buyerBalance = Double.MAX_VALUE;
+        } else {
+            if (hasPlayedBefore(offlinePlayer)) {
+                buyerBalance = Config.useXP ?
+                            XPEconomy.getXP(offlinePlayer) :
+                            EzChestShop.getEconomy().getBalance(offlinePlayer);
+            } else {
+                buyerBalance = 0;
+            }
+        }
+        int emptyCount = containerEmptyCount(storageInventory, itemStack);
+        int howManyExists = howManyOfItemExists(playerInventory, itemStack);
+
+        for (int num = 0; num < emptyCount; num++) {
+            if (possibleCount + 1 > howManyExists) {
+                break;
+            }
+            possibleCount += 1;
+        }
+
+        int result = 0;
+        for (int num = 0; num < possibleCount; num++) {
+            result += 1;
+            if ((num + 1) * eachSellPrice > buyerBalance) {
+                return String.valueOf(num);
+            }
+        }
+
+        return String.valueOf(result);
+    }
+
+    public static boolean containsAtLeast(Inventory inventory, ItemStack item, int amount) {
+        if (item.getType() == Material.FIREWORK_ROCKET) {
+            int count = 0;
+            for (ItemStack content : inventory.getStorageContents()) {
+                if (content == null || content.getType() == Material.AIR) {
+                    continue;
+                }
+                if (isSimilar(content, item)) {
+                    count += content.getAmount();
+                }
+            }
+            return count >= amount;
+        } else {
+            return inventory.containsAtLeast(item, amount);
+        }
+    }
+
+    /*
+    Removes the given ItemStacks from the inventory.
+
+    It will try to remove 'as much as possible' from the types and amounts you give as arguments.
+
+    The returned HashMap contains what it couldn't remove, where the key is the index of the parameter, and the value is the ItemStack at that index of the varargs parameter. If all the given ItemStacks are removed, it will return an empty HashMap.
+
+    It is known that in some implementations this method will also set the inputted argument amount to the number of that item not removed from slots.
+     */
+    public static HashMap<Integer, ItemStack> removeItem(@NotNull Inventory inventory, @NotNull ItemStack... stacks) {
+        HashMap<Integer, ItemStack> leftover = new HashMap<>();
+        for (int i = 0; i < stacks.length; i++) {
+            ItemStack stack = stacks[i];
+            if (stack == null || stack.getType() == Material.AIR) {
+                continue;
+            }
+            if (stack.getType() == Material.FIREWORK_ROCKET) {
+                int amount = stack.getAmount();
+                for (int slot = 0; slot < inventory.getSize(); slot++) {
+                    ItemStack item = inventory.getItem(slot);
+                    if (item == null || item.getType() == Material.AIR) {
+                        continue;
+                    }
+                    if (isSimilar(item, stack)) {
+                        int newAmount = item.getAmount() - amount;
+                        if (newAmount > 0) {
+                            item.setAmount(newAmount);
+                            amount = 0;
+                        } else {
+                            amount = -newAmount;
+                            inventory.setItem(slot, null);
+                        }
+                    }
+                    if (amount <= 0) {
+                        break;
+                    }
+                }
+                if (amount > 0) {
+                    stack.setAmount(amount);
+                    leftover.put(i, stack);
+                }
+            } else {
+                inventory.removeItem(stack);
+            }
+        }
+        return leftover;
+    }
+
+    public static boolean isSimilar(@Nullable ItemStack stack1, @Nullable ItemStack stack2) {
+        if (stack1 == null || stack2 == null) {
+            return false;
+        } else if (stack1 == stack2) {
+            return true;
+        } else {
+            if (stack1.getType() == Material.FIREWORK_ROCKET && stack2.getType() == Material.FIREWORK_ROCKET) {
+                FireworkMeta meta1 = (FireworkMeta) stack1.getItemMeta();
+                FireworkMeta meta2 = (FireworkMeta) stack2.getItemMeta();
+                if (meta1 != null && meta2 != null) {
+                    if (meta1.getEffects().size() != meta2.getEffects().size()) {
+                        return false;
+                    }
+                    if (meta1.getPower() != meta2.getPower()) {
+                        return false;
+                    }
+                    for (int i = 0; i < meta1.getEffects().size(); i++) {
+                        if (!meta1.getEffects().get(i).equals(meta2.getEffects().get(i))) {
+                            return false;
+                        }
+                    }
+                    if (meta1.hasDisplayName() != meta2.hasDisplayName()) {
+                        return false;
+                    } else if (meta1.hasDisplayName()) {
+                        if (!meta1.getDisplayName().equals(meta2.getDisplayName())) {
+                            return false;
+                        }
+                    }
+
+                    if (meta1.hasLore() != meta2.hasLore()) {
+                        return false;
+                    } else if (meta1.hasLore()) {
+                        if (!meta1.getLore().equals(meta2.getLore())) {
+                            return false;
+                        }
+                    }
+
+                    if (meta1.hasCustomModelData() != meta2.hasCustomModelData()) {
+                        return false;
+                    } else if (meta1.hasCustomModelData()) {
+                        if (meta1.getCustomModelData() != meta2.getCustomModelData()) {
+                            return false;
+                        }
+                    }
+
+                    if (meta1.hasEnchants() != meta2.hasEnchants()) {
+                        return false;
+                    } else if (meta1.hasEnchants()) {
+                        if (!meta1.getEnchants().equals(meta2.getEnchants())) {
+                            return false;
+                        }
+                    }
+
+                    if (!meta1.getItemFlags().equals(meta2.getItemFlags())) {
+                        return false;
+                    }
+                    if (meta1.getAttributeModifiers() != null) {
+                        if (!meta1.getAttributeModifiers().equals(meta2.getAttributeModifiers())) {
+                            return false;
+                        }
+                    } else if (meta2.getAttributeModifiers() != null) {
+                        return false;
+                    }
+
+                    if (meta1.isUnbreakable() != meta2.isUnbreakable()) {
+                        return false;
+                    }
+                }
+            } else if (!stack1.isSimilar(stack2)) {
+                return false;
+            }
+            return true;
+        }
+    }
+
+    public static boolean isInteger(String str) {
+        try {
+            int num = Integer.parseInt(str);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static String getNextRotation(String current) {
         if (current == null)
             current = Config.settings_defaults_rotation;
@@ -182,6 +564,55 @@ public class Utils {
     }
 
 
+    /**
+     * Apply hex color coding to a String. possibility to add a special start or end
+     * tag to the String.
+     * Versions below 1.16 will only get the last hex color symbol applied to them.
+     *
+     * @param startTag
+     * @param endTag
+     * @param message
+     * @return
+     */
+    public static String translateHexColorCodes(String startTag, String endTag, String message) {
+        final Pattern hexPattern = Pattern.compile(startTag + "([A-Fa-f0-9]{6})" + endTag);
+        final char COLOR_CHAR = ChatColor.COLOR_CHAR;
+        Matcher matcher = hexPattern.matcher(message);
+        StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
+        while (matcher.find()) {
+            String group = matcher.group(1);
+            matcher.appendReplacement(buffer, COLOR_CHAR + "x"
+                    + COLOR_CHAR + group.charAt(0) + COLOR_CHAR + group.charAt(1)
+                    + COLOR_CHAR + group.charAt(2) + COLOR_CHAR + group.charAt(3)
+                    + COLOR_CHAR + group.charAt(4) + COLOR_CHAR + group.charAt(5));
+        }
+        return matcher.appendTail(buffer).toString();
+    }
+
+    public enum FormatType {
+        GUI, CHAT, HOLOGRAM
+    }
+
+    public static String formatNumber(double number, FormatType type) {
+        String result = "Error";
+        DecimalFormat decimalFormat;
+        switch (type) {
+            case GUI:
+                decimalFormat = new DecimalFormat(Config.display_numberformat_gui);
+                result = decimalFormat.format(number);
+                break;
+            case CHAT:
+                decimalFormat = new DecimalFormat(Config.display_numberformat_chat);
+                result = decimalFormat.format(number);
+                break;
+            case HOLOGRAM:
+                decimalFormat = new DecimalFormat(Config.display_numberformat_holo);
+                result = decimalFormat.format(number);
+                break;
+        }
+        EzChestShop.logDebug("Formatted number " + number + " to " + result);
+        return result;
+    }
 
     public static void sendVersionMessage(Player player) {
         player.spigot().sendMessage(

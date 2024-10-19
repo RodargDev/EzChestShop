@@ -309,7 +309,7 @@ public class PlayerCloseToChestListener implements Listener {
     @EventHandler
     public void onShopContentsChangeByBlock(InventoryMoveItemEvent event) {
         if (!event.isCancelled() && ShopContainer.isShop(event.getDestination().getLocation())) {
-            Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(event.getDestination().getLocation()), 1);
+            EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(event.getDestination().getLocation()), 1);
         }
     }
 
@@ -332,7 +332,7 @@ public class PlayerCloseToChestListener implements Listener {
     public void onInventoryChangeByPlayerItemPickup(EntityPickupItemEvent event) {
         if (!event.isCancelled() && event.getEntity().getType() == EntityType.PLAYER) {
             ShopHologram.getViewedHolograms((Player) event.getEntity()).forEach(shopHolo -> {
-                Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(shopHolo.getLocation()), 1);
+                EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(shopHolo.getLocation()), 1);
             });
             TradeShopHologram.getViewedHolograms((Player) event.getEntity()).forEach(tradeShopHolo -> {
                 Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> TradeShopHologram.updateInventoryReplacements(tradeShopHolo.getLocation()), 1);
@@ -343,7 +343,7 @@ public class PlayerCloseToChestListener implements Listener {
     @EventHandler
     public void onShopCapacityChangeByBlockPlace(BlockPlaceEvent event) {
         if (!event.isCancelled() && (event.getBlockPlaced().getType() == Material.CHEST || event.getBlockPlaced().getType() == Material.TRAPPED_CHEST)) {
-            Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> {
+            EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> {
                 Location location = BlockBoundHologram.getShopChestLocation(event.getBlockPlaced());
                 if (ShopContainer.isShop(location)) {
                     ShopHologram.updateInventoryReplacements(location);
@@ -361,22 +361,22 @@ public class PlayerCloseToChestListener implements Listener {
 //        if (!event.isCancelled() && (event.getBlock().getType() == Material.CHEST || event.getBlock().getType() == Material.TRAPPED_CHEST)) {
 //            Location location = BlockBoundHologram.getShopChestLocation(event.getBlock());
 //            if (ShopContainer.isShop(location)) {
-//                Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(location), 1);
+//                EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(location), 1);
 //            }
 //        }
 //    }
 
     @EventHandler
     public void onShopTransactionCapacityChange(PlayerTransactEvent event) {
-        Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(event.getContainerBlock().getLocation()), 1);
+        EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(event.getContainerBlock().getLocation()), 1);
         //TODO see if we can add some data to the event to show which type of shop is traded with.
-        Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> TradeShopHologram.updateInventoryReplacements(event.getContainerBlock().getLocation()), 1);
+        EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> TradeShopHologram.updateInventoryReplacements(event.getContainerBlock().getLocation()), 1);
     }
 
     private void inventoryModifyEventHandler(boolean cancelled, HumanEntity whoClicked) {
         if (!cancelled) {
             ShopHologram.getViewedHolograms((Player) whoClicked).forEach(shopHolo -> {
-                Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(shopHolo.getLocation()), 1);
+                EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> ShopHologram.updateInventoryReplacements(shopHolo.getLocation()), 1);
             });
             TradeShopHologram.getViewedHolograms((Player) whoClicked).forEach(tradeShopHolo -> {
                 Bukkit.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> TradeShopHologram.updateInventoryReplacements(tradeShopHolo.getLocation()), 1);

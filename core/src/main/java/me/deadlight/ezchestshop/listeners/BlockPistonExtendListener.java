@@ -49,10 +49,19 @@ public class BlockPistonExtendListener implements Listener {
                 TileState state = (TileState) blockState;
                 PersistentDataContainer container = state.getPersistentDataContainer();
 
-                if (BlockMaterialUtils.isShulkerBox(block.getType())) {
+                //first we check nobody is already in the shulker container (viewing it)
+                ShulkerBox shulkerBox = (ShulkerBox) block.getState();
+                int viewerCount = shulkerBox.getInventory().getViewers().size();
+                if (viewerCount > 0) {
+                    event.setCancelled(true);
+                    return;
+                }
+
+                if (Utils.isShulkerBox(block.getType())) {
                     //it is a shulkerbox, now checking if its a shop
                     Location shulkerLoc = block.getLocation();
                     if (ShopContainer.isShop(shulkerLoc)) {
+
                         boolean adminshop = container.get(new NamespacedKey(EzChestShop.getPlugin(), "adminshop"), PersistentDataType.INTEGER) == 1;
                         if (EzChestShop.worldguard) {
                             if (adminshop) {
@@ -81,7 +90,7 @@ public class BlockPistonExtendListener implements Listener {
                         if (Config.holodistancing) {
                             ShopHologram.hideForAll(event.getBlock().getLocation());
                         }
-                        Bukkit.getScheduler().scheduleSyncDelayedTask(EzChestShop.getPlugin(), () -> {
+                        EzChestShop.getScheduler().scheduleSyncDelayedTask(() -> {
 
                             Collection<Entity> entitiyList = block.getWorld().getNearbyEntities(shulkerLoc, 2, 2, 2);
                             entitiyList.forEach(entity -> {

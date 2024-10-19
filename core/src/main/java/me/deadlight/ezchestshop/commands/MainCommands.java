@@ -365,8 +365,140 @@ public class MainCommands implements CommandExecutor, TabCompleter {
 
     private void createShop(Player player, String[] args, Block target) throws IOException {
 
-        BlockState blockState = BlockMaterialUtils.getLookedAtBlockState(player, true, true, target, true);
-        if (blockState == null) {
+        if (target != null && target.getType() != Material.AIR) {
+            BlockState blockState = target.getState();
+            //slimefun check
+            if (EzChestShop.slimefun) {
+                boolean sfresult = BlockStorage.hasBlockInfo(target.getLocation());
+                if (sfresult) {
+                    player.sendMessage(lm.slimeFunBlockNotSupported());
+                    return;
+                }
+            }
+
+            if (EzChestShop.worldguard) {
+                if (!WorldGuardUtils.queryStateFlag(FlagRegistry.CREATE_SHOP, player)) {
+                    player.spigot().sendMessage(lm.notAllowedToCreateOrRemove(player));
+                    return;
+                }
+            }
+
+            if (blockState instanceof TileState) {
+
+                if (Utils.isApplicableContainer(target)) {
+
+                    if (checkIfLocation(target.getLocation(), player)) {
+
+                    if (EzChestShop.towny && Config.towny_integration_shops_only_in_shop_plots) {
+                        if (!ShopPlotUtil.isShopPlot(target.getLocation())) {
+                            player.spigot().sendMessage(lm.notAllowedToCreateOrRemove(player));
+                            return;
+                        }
+                        if (!(ShopPlotUtil.doesPlayerOwnShopPlot(player, target.getLocation()) ||
+                                ShopPlotUtil.doesPlayerHaveAbilityToEditShopPlot(player, target.getLocation()))) {
+                            player.spigot().sendMessage(lm.notAllowedToCreateOrRemove(player));
+                            return;
+                        }
+                    }
+                    TileState state = (TileState) blockState;
+
+                    PersistentDataContainer container = state.getPersistentDataContainer();
+
+                    //owner (String) (player name)
+                    //buy (double)
+                    //sell (double)
+                    //item (String) (itemstack)
+
+                    //already a shop
+                    if (container.has(new NamespacedKey(EzChestShop.getPlugin(), "owner"), PersistentDataType.STRING) || ifItsADoubleChestShop(target) != null) {
+
+                        player.sendMessage(lm.alreadyAShop());
+
+                    } else {
+                        //not a shop
+
+                        if (player.getInventory().getItemInMainHand().getType() != Material.AIR) {
+                            ItemStack thatIteminplayer = player.getInventory().getItemInMainHand();
+                            ItemStack thatItem = thatIteminplayer.clone();
+                            thatItem.setAmount(1);
+                            if (Utils.isShulkerBox(thatItem.getType()) && Utils.isShulkerBox(target)) {
+                                player.sendMessage(lm.invalidShopItem());
+                                return;
+                            }
+
+                            double buyprice = Double.parseDouble(args[1]);
+                            double sellprice = Double.parseDouble(args[2]);
+
+                            if (Config.settings_buy_greater_than_sell && (sellprice > buyprice && buyprice != 0)) {
+                                player.sendMessage(lm.buyGreaterThanSellRequired());
+                                return;
+                            }
+                            //owner, buy, sell, msgtoggle, dbuy, dsell, admins, shareincome, trans, adminshop, rotation
+
+                            int isDbuy = Config.settings_zero_equals_disabled ?
+                                    (buyprice == 0 ? 1 : (Config.settings_defaults_dbuy ? 1 : 0))
+                                    : (Config.settings_defaults_dbuy ? 1 : 0);
+                            int isDSell = Config.settings_zero_equals_disabled ?
+                                    (sellprice == 0 ? 1 : (Config.settings_defaults_dsell ? 1 : 0))
+                                    : (Config.settings_defaults_dsell ? 1 : 0);
+
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "owner"), PersistentDataType.STRING, player.getUniqueId().toString());
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "buy"), PersistentDataType.DOUBLE, buyprice);
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "sell"), PersistentDataType.DOUBLE, sellprice);
+                            //add new settings data later
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "msgtoggle"), PersistentDataType.INTEGER, Config.settings_defaults_transactions ? 1 : 0);
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "dbuy"), PersistentDataType.INTEGER, isDbuy);
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER, isDSell);
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING, "none");
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER, Config.settings_defaults_shareprofits ? 1 : 0);
+                            //container.set(new NamespacedKey(EzChestShop.getPlugin(), "trans"), PersistentDataType.STRING, "none");
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "adminshop"), PersistentDataType.INTEGER, 0);
+                            container.set(new NamespacedKey(EzChestShop.getPlugin(), "rotation"), PersistentDataType.STRING, Config.settings_defaults_rotation);
+
+
+
+
+                            //msgtoggle 0/1
+                            //dbuy 0/1
+                            //dsell 0/1
+                            //admins [list of uuids seperated with @ in string form]
+                            //shareincome 0/1
+                            //logs [list of infos seperated by @ in string form]
+                            //trans [list of infos seperated by @ in string form]
+                            //adminshop 0/1
+                            Utils.storeItem(thatItem, container);
+                            state.update();
+                            ShopContainer.createShop(target.getLocation(), player, thatItem, buyprice, sellprice, false,
+                                    isDbuy == 1, isDSell == 1, "none", true, false, Config.settings_defaults_rotation);
+
+                            player.sendMessage(lm.shopCreated());
+
+
+                        } else {
+
+                            player.sendMessage(lm.holdSomething());
+
+                        }
+
+
+                    }
+
+                }
+                    else {
+                        player.spigot().sendMessage(lm.notAllowedToCreateOrRemove(player));
+                    }
+                } else {
+
+                    player.sendMessage(lm.noChest());
+
+                }
+
+            } else {
+                player.sendMessage(lm.lookAtChest());
+            }
+
+
+        } else {
             player.sendMessage(lm.lookAtChest());
             return;
         }
@@ -616,8 +748,6 @@ public class MainCommands implements CommandExecutor, TabCompleter {
 
             blockState.update();
             player.sendMessage(lm.chestShopRemoved());
-        } else {
-            player.sendMessage(lm.lookAtChest());
         }
     }
 
@@ -1145,13 +1275,13 @@ public class MainCommands implements CommandExecutor, TabCompleter {
             List<Block> blocks = Utils.getNearbyEmptyShopForAdmins(player);
             player.sendMessage(lm.emptyShopHighlightedEnabled(blocks.size()));
             AtomicInteger actionBarCounter = new AtomicInteger();
-            EzChestShop.getPlugin().getServer().getScheduler().runTaskLaterAsynchronously(EzChestShop.getPlugin(), () -> {
+            EzChestShop.getScheduler().runTaskLaterAsynchronously(EzChestShop.getPlugin(), () -> {
 
                 //Iterate through each block with an asychronous delay of 5 ticks
                 blocks.forEach(b -> {
                     BlockOutline outline = new BlockOutline(player, b);
                     int index = blocks.indexOf(b);
-                    EzChestShop.getPlugin().getServer().getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> {
+                    EzChestShop.getScheduler().runTaskLater(EzChestShop.getPlugin(), () -> {
                         outline.showOutline();
                         if (outline.muted) {
                             return;

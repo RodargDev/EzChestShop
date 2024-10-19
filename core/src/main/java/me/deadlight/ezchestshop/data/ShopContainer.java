@@ -13,6 +13,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.TileState;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -54,6 +55,10 @@ public class ShopContainer {
         db.deleteEntry("location", StringUtils.LocationtoString(loc),
                 "shopdata");
         shopMap.remove(loc);
+
+        //This is not workign as intended
+//        InventoryHolder inventoryHolder = (InventoryHolder) loc.getBlock();
+//        inventoryHolder.getInventory().getViewers().forEach(viewer -> viewer.closeInventory());
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (ShopHologram.hasHologram(loc, p))
@@ -512,7 +517,7 @@ public class ShopContainer {
 
 
     public static void startSqlQueueTask() {
-        Bukkit.getScheduler().runTaskTimer(EzChestShop.getPlugin(), new Runnable() {
+        EzChestShop.getScheduler().runTaskTimer(EzChestShop.getPlugin(), new Runnable() {
             @Override
             public void run() {
 

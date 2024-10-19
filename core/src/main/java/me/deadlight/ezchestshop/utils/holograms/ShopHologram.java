@@ -58,8 +58,9 @@ public class ShopHologram {
             List<String> structure = new ArrayList<>(shop.getSettings().isAdminshop() ?
                     Config.holostructure_admin : Config.holostructure);
 
-            String itemName = ItemUtils.getFinalItemName(shop.getShopItem());
-            Inventory shopInventory = BlockMaterialUtils.getBlockInventory(location.getBlock());
+            String itemName = Utils.getFinalItemName(shop.getShopItem());
+            Inventory shopInventory = Utils.getBlockInventory(location.getBlock());
+            assert shopInventory != null;
             int availableSlots = shopInventory.getSize();
             for (ItemStack item : shopInventory.getStorageContents()) {
                 // if item is one of the below, then it is a slot that can be used, otherwise subtract from available slots.
@@ -79,8 +80,8 @@ public class ShopHologram {
              */
             HashMap<String, String> textReplacements = new HashMap<>();
             textReplacements.put("%item%", itemName);
-            textReplacements.put("%buy%", shop.getBuyPrice() + "");
-            textReplacements.put("%sell%", shop.getSellPrice() + "");
+            textReplacements.put("%buy%", Utils.formatNumber(shop.getBuyPrice(), Utils.FormatType.HOLOGRAM));
+            textReplacements.put("%sell%", Utils.formatNumber(shop.getSellPrice(), Utils.FormatType.HOLOGRAM));
             textReplacements.put("%currency%", Config.currency);
             textReplacements.put("%owner%", Bukkit.getOfflinePlayer(shop.getOwnerID()).getName());
             textReplacements.put("%maxbuy%", possibleCounts.get(0));
@@ -98,7 +99,10 @@ public class ShopHologram {
             textReplacements.put("<itemdataRest/>", "");
             // Emptyshop should only be shown for non-adminshops.
             // Previous config versions had the placeholder, so this check is needed for backwards compatibility.
-            if (!shop.getSettings().isAdminshop()) {
+            if (!shop.getSettings().isAdminshop() &&
+                (shop.getOwnerID() == player.getUniqueId() ||
+                    shop.getSettings().getAdmins().contains(player.getUniqueId().toString()))
+            ) {
                 // visible if the shop does not contain at least 1 item.
                 boolean visible = !InventoryUtils.containsAtLeast(shopInventory, shop.getShopItem(), 1);
                 textReplacements.put("<emptyShopInfo/>", visible ? lm.emptyShopHologramInfo() : "");
@@ -377,7 +381,7 @@ public class ShopHologram {
         PlayerBlockBoundHologram playerHolo = blockHolo.getPlayerHologram(player);
         if (playerHolo != null) {
             shop = ShopContainer.getShop(location);
-            playerHolo.updateTextReplacement("%buy%", shop.getBuyPrice() + "", true, true);
+            playerHolo.updateTextReplacement("%buy%", Utils.formatNumber(shop.getBuyPrice(), Utils.FormatType.HOLOGRAM), true, true);
         }
     }
 
@@ -385,7 +389,7 @@ public class ShopHologram {
         PlayerBlockBoundHologram playerHolo = blockHolo.getPlayerHologram(player);
         if (playerHolo != null) {
             shop = ShopContainer.getShop(location);
-            playerHolo.updateTextReplacement("%sell%", shop.getSellPrice() + "", true, true);
+            playerHolo.updateTextReplacement("%sell%", Utils.formatNumber(shop.getSellPrice(), Utils.FormatType.HOLOGRAM), true, true);
         }
     }
 
@@ -430,12 +434,31 @@ public class ShopHologram {
         PlayerBlockBoundHologram playerHolo = blockHolo.getPlayerHologram(player);
         if (playerHolo != null) {
             shop = ShopContainer.getShop(location);
-            Inventory shopInventory = BlockMaterialUtils.getBlockInventory(location.getBlock());
+            Inventory shopInventory = Utils.getBlockInventory(location.getBlock());
+            assert shopInventory != null;
             int availableSlots = shopInventory.getSize();
-            playerHolo.updateTextReplacement("%stock%", InventoryUtils.howManyOfItemExists(shopInventory.getStorageContents(),
-                    shop.getShopItem()) + "", true, false);
-            playerHolo.updateTextReplacement("%capacity%", availableSlots * shop.getShopItem().getMaxStackSize() + "",
-                    true, false);
+
+            //check if the hologram text actually contains the %stock% and %capacity% placeholders
+            boolean containsStock = false;
+            boolean containsCapacity = false;
+
+            for (String content : playerHolo.getBlockHologram().getContents()) {
+                if (content.contains("%stock%")) {
+                    containsStock = true;
+                }
+                if (content.contains("%capacity%")) {
+                    containsCapacity = true;
+                }
+            }
+
+            if (containsStock) {
+                playerHolo.updateTextReplacement("%stock%", Utils.howManyOfItemExists(shopInventory.getStorageContents(),
+                        shop.getShopItem()) + "", true, false);
+            }
+            if (containsCapacity) {
+                playerHolo.updateTextReplacement("%capacity%", availableSlots * shop.getShopItem().getMaxStackSize() + "",
+                        true, false);
+            }
         }
     }
 
@@ -447,8 +470,27 @@ public class ShopHologram {
                     Bukkit.getOfflinePlayer(shop.getOwnerID()), player.getInventory().getStorageContents(),
                     BlockMaterialUtils.getBlockInventory(shop.getLocation().getBlock()).getStorageContents(),
                     shop.getBuyPrice(), shop.getSellPrice(), shop.getShopItem());
-            playerHolo.updateTextReplacement("%maxbuy%", possibleCounts.get(0) + "", false, false);
-            playerHolo.updateTextReplacement("%maxsell%", possibleCounts.get(1) + "", false, false);
+
+            //check if the hologram text actually contains the %maxbuy% and %maxsell% placeholders
+            boolean containsMaxBuy = false;
+            boolean containsMaxSell = false;
+
+            for (String content : playerHolo.getBlockHologram().getContents()) {
+                if (content.contains("%maxbuy%")) {
+                    containsMaxBuy = true;
+                }
+                if (content.contains("%maxsell%")) {
+                    containsMaxSell = true;
+                }
+            }
+
+            if (containsMaxBuy) {
+                playerHolo.updateTextReplacement("%maxbuy%", possibleCounts.get(0) + "", true, false);
+            }
+
+            if (containsMaxSell) {
+                playerHolo.updateTextReplacement("%maxsell%", possibleCounts.get(1) + "", true, false);
+            }
         }
     }
 
@@ -457,11 +499,12 @@ public class ShopHologram {
         if (!locationBlockHoloMap.containsKey(location)) {
             return;
         }
+        //laggy part
         locationBlockHoloMap.get(location).getViewerHolograms().forEach(playerBlockBoundHologram -> {
             ShopHologram shopHolo = ShopHologram.getHologram(location, playerBlockBoundHologram.getPlayer());
-            shopHolo.updateStockAndCapacity();
+            shopHolo.updateStockAndCapacity(); //second we gonna look into this
             shopHolo.updateEmptyShopInfo();
-            shopHolo.updateMaxBuyAndSell();
+            shopHolo.updateMaxBuyAndSell(); //first we gonna look into this
         });
     }
 

@@ -19,6 +19,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
+import org.bukkit.block.ShulkerBox;
 import org.bukkit.block.TileState;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
@@ -78,7 +79,17 @@ public class BlockBreakListener implements Listener {
                 loc = Utils.isPartOfTheChestShop(event.getBlock().getLocation()).getLocation();
             }
             if (ShopContainer.isShop(loc) || isPartOfShop) {
-                if (BlockMaterialUtils.isShulkerBox(event.getBlock())) {
+                if (Utils.isShulkerBox(event.getBlock())) {
+
+                    //first we check nobody is already in the shulker container (viewing it)
+                    ShulkerBox shulkerBox = (ShulkerBox) event.getBlock().getState();
+                    int viewerCount = shulkerBox.getInventory().getViewers().size();
+                    if (viewerCount > 0) {
+                        event.setCancelled(true);
+                        event.getPlayer().sendMessage(lm.noBreakingWhileShopOpen());
+                        return;
+                    }
+
                     if (event.isDropItems()) {
                         event.setDropItems(false);
                         ItemStack shulker = event.getBlock().getDrops().stream().findFirst().get();

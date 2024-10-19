@@ -509,6 +509,109 @@ public class EcsAdmin implements CommandExecutor, TabCompleter {
                     return;
                 }
             }
+
+            if (blockState instanceof TileState) {
+
+                if (Utils.isApplicableContainer(target)) {
+
+                        TileState state = (TileState) blockState;
+
+                        PersistentDataContainer container = state.getPersistentDataContainer();
+
+                        //owner (String) (player name)
+                        //buy (double)
+                        //sell (double)
+                        //item (String) (itemstack)
+
+                        //already a shop
+                        if (container.has(new NamespacedKey(EzChestShop.getPlugin(), "owner"), PersistentDataType.STRING)) {
+
+                            player.sendMessage(lm.alreadyAShop());
+
+                        } else {
+                            //not a shop
+
+                            if (player.getInventory().getItemInMainHand().getType() != Material.AIR) {
+                                ItemStack thatIteminplayer = player.getInventory().getItemInMainHand();
+                                ItemStack thatItem = thatIteminplayer.clone();
+                                thatItem.setAmount(1);
+                                if (Utils.isShulkerBox(thatItem.getType()) && Utils.isShulkerBox(target)) {
+                                    player.sendMessage(lm.invalidShopItem());
+                                    return;
+                                }
+
+                                double buyprice = Double.parseDouble(args[1]);
+                                double sellprice = Double.parseDouble(args[2]);
+
+                                int isDBuy = Config.settings_zero_equals_disabled ?
+                                        (buyprice == 0 ? 1 : (Config.settings_defaults_dbuy ? 1 : 0))
+                                        : (Config.settings_defaults_dbuy ? 1 : 0);
+                                int isDSell = Config.settings_zero_equals_disabled ?
+                                        (sellprice == 0 ? 1 : (Config.settings_defaults_dsell ? 1 : 0))
+                                        : (Config.settings_defaults_dsell ? 1 : 0);
+
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "owner"), PersistentDataType.STRING, player.getUniqueId().toString());
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "buy"), PersistentDataType.DOUBLE, buyprice);
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "sell"), PersistentDataType.DOUBLE, sellprice);
+                                //add new settings data later
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "msgtoggle"), PersistentDataType.INTEGER, Config.settings_defaults_transactions ? 1 : 0);
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "dbuy"), PersistentDataType.INTEGER, isDBuy);
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "dsell"), PersistentDataType.INTEGER, isDSell);
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "admins"), PersistentDataType.STRING, "none");
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "shareincome"), PersistentDataType.INTEGER, Config.settings_defaults_shareprofits ? 1 : 0);
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "adminshop"), PersistentDataType.INTEGER, 1);
+                                container.set(new NamespacedKey(EzChestShop.getPlugin(), "rotation"), PersistentDataType.STRING, Config.settings_defaults_rotation);
+
+                                ShopContainer.createShop(target.getLocation(), player, thatItem, buyprice, sellprice, false,
+                                        isDBuy == 1, isDSell == 1, "none", true, true, Config.settings_defaults_rotation);
+                                //msgtoggle 0/1
+                                //dbuy 0/1
+                                //dsell 0/1
+                                //admins [list of uuids seperated with @ in string form]
+                                //shareincome 0/1
+                                //logs [list of infos seperated by @ in string form]
+                                //trans [list of infos seperated by @ in string form]
+                                //adminshop 0/1
+                                Utils.storeItem(thatItem, container);
+                                state.update();
+                                player.sendMessage(lm.shopCreated());
+
+
+                            } else {
+
+                                player.sendMessage(lm.holdSomething());
+
+                            }
+
+
+                        }
+
+
+                } else {
+
+                    player.sendMessage(lm.noChest());
+
+                }
+
+            } else {
+                player.sendMessage(lm.lookAtChest());
+            }
+        } else {
+            player.sendMessage(lm.lookAtChest());
+        }
+    }
+    public boolean isPositive(double price) {
+        if (price < 0) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    private boolean checkIfLocation(Location location, Player player) {
+        Block exactBlock = player.getTargetBlockExact(6);
+        if (exactBlock == null || exactBlock.getType() == Material.AIR || !(Utils.isApplicableContainer(exactBlock))) {
+            return false;
         }
 
 

@@ -128,6 +128,11 @@ public class LanguageManager {
             changes = true;
         }
 
+        if (!fc.contains("other.no-breaking-while-viewing")) {
+            fc.set("other.no-breaking-while-viewing", "&cYou cannot break a shop while someone is using it!");
+            changes = true;
+        }
+
 
         if (changes) {
             fc.options().copyHeader(true);
@@ -331,12 +336,12 @@ public class LanguageManager {
     }
 
     public String transactionBuyInform(String player, int amount, String item, double price) {
-        return StringUtils.colorify(getString("transactions.player-inform-buy").replace("%player%", player).replace("%amount%",
-                String.valueOf(amount)).replace("%item%", item).replace("%price%", String.valueOf(price)).replace("%currency%", Config.currency));
+        return Utils.colorify(getString("transactions.player-inform-buy").replace("%player%", player).replace("%amount%",
+                String.valueOf(amount)).replace("%item%", item).replace("%price%", Utils.formatNumber(price, Utils.FormatType.CHAT)).replace("%currency%", Config.currency));
     }
     public String transactionSellInform(String player, int amount, String item, double price) {
-        return StringUtils.colorify(getString("transactions.player-inform-sell").replace("%player%", player).replace("%amount%",
-                        String.valueOf(amount)).replace("%item%", item).replace("%price%", String.valueOf(price)).replace("%currency%", Config.currency));
+        return Utils.colorify(getString("transactions.player-inform-sell").replace("%player%", player).replace("%amount%",
+                        String.valueOf(amount)).replace("%item%", item).replace("%price%", Utils.formatNumber(price, Utils.FormatType.CHAT)).replace("%currency%", Config.currency));
     }
 
 
@@ -836,10 +841,10 @@ public class LanguageManager {
         return StringUtils.colorify(getString("command-messages.sellPriceUpdated"));
     }
     public String emptyShopHighlightedDisabled() {
-        return StringUtils.colorify(getString("command-messages.emptyShopHightLighted.enabled"));
+        return Utils.colorify(getString("command-messages.emptyShopHightLighted.disabled"));
     }
     public String emptyShopHighlightedEnabled(int shopCount) {
-        return StringUtils.colorify(getString("command-messages.emptyShopHightLighted.disabled").replace("%emptyCount%", "" + shopCount));
+        return Utils.colorify(getString("command-messages.emptyShopHightLighted.enabled").replace("%emptyCount%", "" + shopCount));
     }
 
 
@@ -1001,6 +1006,10 @@ public class LanguageManager {
     }
     public String itemEnchantHologramMore(int amount) {
         return StringUtils.colorify(getString("hologram.item-enchantment-more")).replace("%amount%", "" + amount);
+    }
+
+    public String noBreakingWhileShopOpen() {
+        return Utils.colorify(getString("other.no-breaking-while-viewing"));
     }
 
 

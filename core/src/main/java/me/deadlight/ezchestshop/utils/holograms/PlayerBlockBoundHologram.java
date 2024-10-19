@@ -1,10 +1,12 @@
 package me.deadlight.ezchestshop.utils.holograms;
 
+import me.deadlight.ezchestshop.EzChestShop;
 import me.deadlight.ezchestshop.data.Config;
 import me.deadlight.ezchestshop.utils.ASHologram;
 import me.deadlight.ezchestshop.utils.FloatingItem;
 import me.deadlight.ezchestshop.utils.StringUtils;
 import me.deadlight.ezchestshop.utils.Utils;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -362,7 +364,7 @@ public class PlayerBlockBoundHologram {
      *     The key is the replacement key and the value is a list of line numbers that need to be replaced
      * </p>
      */
-    private void queryReplacementLines() {
+    private void  queryReplacementLines() {
 
         queryReplacementLinesIndividual(textReplacements.keySet(), textReplacementLines, "");
 
@@ -372,6 +374,7 @@ public class PlayerBlockBoundHologram {
         // This is why we need to add them in, to check if the line contains the full tag.
         queryReplacementLinesIndividual(conditionalTags.keySet()
                 .stream().map(s -> "<" + s + ">").collect(Collectors.toSet()), conditionalTagLines, "<|>");
+
     }
 
     /**
@@ -611,7 +614,7 @@ public class PlayerBlockBoundHologram {
      * Calculate the processed contents of the hologram.
      * <br>
      * The processed contents are the contents of the hologram with all
-     * replacements, colorifications, reversals and conditional tags applied.
+     * replacements, colors, reversals and conditional tags applied.
      *
      * @return The processed contents
      */
@@ -635,6 +638,9 @@ public class PlayerBlockBoundHologram {
 
         // Process the text replacements
         for (String key : textReplacements.keySet()) {
+            if (!textReplacementLines.containsKey(key)) {
+                continue;
+            }
             String replacement = textReplacements.get(key);
             for (int line : textReplacementLines.get(key)) {
                 // replace the placeholder with the replacement text
